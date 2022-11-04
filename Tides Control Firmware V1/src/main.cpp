@@ -7,8 +7,8 @@
 #include <Bounce2.h>
 #include <stdlib.h>
 
-#define F_CPU 8000000  // This is used by delay.h library
-#define BUTTON_DEBOUNCE_DELAY   20   // [ms]
+//#define F_CPU 8000000  // This is used by delay.h library
+#define BUTTON_DEBOUNCE_DELAY   10   // [ms]
 
 #define  MOTOR    4
 #define  PWR_BTN  1
@@ -17,16 +17,19 @@
 
 #define BTN 1
 #define timer_init() (TIMSK |= (1 << OCIE0A))
-#define BTN_HOLD_MS 200    // Press button for 1 second
+#define BTN_HOLD_MS 400    // Press button for 1 second
 
 Bounce POWER_BTN  = Bounce();
 Bounce STRT_BTN   = Bounce();
+
+void setup_sleep_mode();
+void setup_fast_PWM();
 
 void run();
 void check_btn();
 void power_off();
 void adc_setup();
-void setup_fast_PWM();
+
 
 int pwr_state = 1;
 int run_state = 0;
@@ -60,19 +63,9 @@ enum Device_Status
 Device_Status status = RUNNING; // Set start ON or OFF when power is connected
 
 void setup() {
-  // put your setup code here, to run once:
 
-  sei();                  // Enable interrupts
-  PORTB |= (1 << BTN);    // Enable PULL_UP resistor
-  GIMSK |= (1 << PCIE);   // Enable Pin Change Interrupts
-  PCMSK |= (1 << BTN);    // Use PCINTn as interrupt pin (Button I/O pin)
-  TCCR0A |= (1 << WGM01); // Set CTC mode on Timer 1
-  TIMSK |= (1 << OCIE0A); // Enable the Timer/Counter0 Compare Match A interrupt
-  TCCR0B |= (1 << CS01);  // Set prescaler to 8
-  OCR0A = 125;            // Set the output compare reg so tops at 1 ms
-
-  //adc_setup();
-
+  //register setup;
+  setup_sleep_mode();
   setup_fast_PWM();
 
   btn_status = BTN_UP;
@@ -80,16 +73,12 @@ void setup() {
   pinMode(MOTOR, OUTPUT);
   pinMode(PWR_LED, OUTPUT);
 
-  //POWER_BTN.attach( PWR_BTN ,  INPUT_PULLUP );
-  //POWER_BTN.interval(5); // interval in ms
-
   STRT_BTN.attach( CTR_BTN ,  INPUT );
   STRT_BTN.interval(5); // interval in ms
 
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
 
   if (btn_status == BTN_DOWN)
         {
@@ -100,7 +89,7 @@ void loop() {
                 else
                 {
                     status = RUNNING;
-                    // setup of the device here if needed;
+                    //reset ADC register to original state.
                     ADCSRA |= _BV(ADEN);   
                 }
                 btn_status = BTN_IGNORE; // If status already changed don't swap it again
@@ -110,66 +99,42 @@ void loop() {
         {
             if (status) // Is status RUNNING?
             {
-                /* main code here */
 
                 PORTB |= (1 << PB0); // Pin 0 ON
                 
-
                 run();
 
-                /* -------------- */
             }
             else
             {
                 PORTB &= ~(1 << PB0); // Pin 0 OFF
+
+                //reset motor, and motor speed before sleeping
                 analogWrite(MOTOR, 0);
                 motor_spd = 150;
                 run_state = 0;
                 power_off();
             }
         }
+}
 
-  /*POWER_BTN.update();
+void setup_sleep_mode(){
 
-  if ( POWER_BTN.changed() ) {
+  sei();                  // Enable interrupts
+  PORTB |= (1 << BTN);    // Enable PULL_UP resistor
 
-    int deboucedInput = POWER_BTN.read();
-    
-    if ( deboucedInput == LOW ) {
+  GIMSK |= (1 << PCIE);   // Enable Pin Change Interrupts
+  PCMSK |= (1 << BTN);    // Use PCINTn as interrupt pin (Button I/O pin)
 
-      pwr_state = (pwr_state + 1)%2;
-
-    } else {
-
-    }
-  }
-
-  */
-  /*
-  if (pwr_state == 1) {
-
-    run();
-    digitalWrite(PWR_LED, HIGH);
-
-  } else {
-
-    //go to deep sleep until woken up.
-    digitalWrite(PWR_LED, LOW);
-
-    //turn motor off and go to sleep.
-    analogWrite(MOTOR, 0);
-    run_state = 0;
-
-  }
-  */
+  TCCR0A |= (1 << WGM01); // Set CTC mode on Timer 1
+  TIMSK |= (1 << OCIE0A); // Enable the Timer/Counter0 Compare Match A interrupt
+  TCCR0B |= (1 << CS01);  // Set prescaler to 8
+  OCR0A = 125;            // Set the output compare reg so tops at 1 ms
 
 }
 
-
 void setup_fast_PWM() {
 
-  TCCR0A = 2<<COM0A0 | 2<<COM0B0 | 3<<WGM00;
-  TCCR0B = 0<<WGM02 | 1<<CS00;
   TCCR1 = 0<<PWM1A | 0<<COM1A0 | 1<<CS10;
   GTCCR = 1<<PWM1B | 2<<COM1B0;
 
@@ -200,7 +165,7 @@ void run() {
 
     }
 
-    delay(10);
+    _delay_ms(3);
     
   } else {
 
