@@ -3,7 +3,6 @@
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include <avr/wdt.h>
-
 #include <Arduino.h>
 #include <Bounce2.h>
 
@@ -16,7 +15,7 @@
 
 #define BTN 1
 #define timer_init() (TIMSK |= (1 << OCIE0A))
-#define BTN_HOLD_MS 500    // Press button for 1 second
+#define BTN_HOLD_MS 200    // Press button for 1 second
 
 Bounce POWER_BTN  = Bounce();
 Bounce STRT_BTN   = Bounce();
