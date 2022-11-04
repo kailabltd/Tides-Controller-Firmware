@@ -5,7 +5,9 @@
 #include <avr/wdt.h>
 #include <Arduino.h>
 #include <Bounce2.h>
+#include <stdlib.h>
 
+#define F_CPU 8000000  // This is used by delay.h library
 #define BUTTON_DEBOUNCE_DELAY   20   // [ms]
 
 #define  MOTOR    4
@@ -24,6 +26,7 @@ void run();
 void check_btn();
 void power_off();
 void adc_setup();
+void setup_fast_PWM();
 
 int pwr_state = 1;
 int run_state = 0;
@@ -69,6 +72,8 @@ void setup() {
   OCR0A = 125;            // Set the output compare reg so tops at 1 ms
 
   //adc_setup();
+
+  setup_fast_PWM();
 
   btn_status = BTN_UP;
 
@@ -160,6 +165,15 @@ void loop() {
 
 }
 
+
+void setup_fast_PWM() {
+
+  TCCR0A = 2<<COM0A0 | 2<<COM0B0 | 3<<WGM00;
+  TCCR0B = 0<<WGM02 | 1<<CS00;
+  TCCR1 = 0<<PWM1A | 0<<COM1A0 | 1<<CS10;
+  GTCCR = 1<<PWM1B | 2<<COM1B0;
+
+}
 
 void run() {
 
